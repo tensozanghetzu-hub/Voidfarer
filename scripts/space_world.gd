@@ -526,7 +526,16 @@ func simulate(delta: float) -> void:
 	if respawn_timer <= 0.0:
 		respawn_timer = 24.0
 		if enemies.size() < int(system["pirates"]):
-			_spawn_enemy(rng.randi_range(0, 5))
+			var spawn_index := rng.randi_range(0, 5)
+			if system_id == "umbra":
+				var elite_present := false
+				for enemy in enemies:
+					if bool(enemy["elite"]):
+						elite_present = true
+						break
+				if not elite_present:
+					spawn_index = 0
+			_spawn_enemy(spawn_index)
 	camera_pos = camera_pos.lerp(player["pos"], 1.0 - exp(-delta * 5.5))
 	if get_target().is_empty() and target_id >= 0:
 		target_kind = ""
@@ -591,6 +600,42 @@ func _damage_enemy(enemy: Dictionary, amount: float) -> void:
 	if float(enemy["hull"]) <= 0.0:
 		_destroy_enemy(enemy)
 
+func record_contract_event(event_type: String, resource_id := "", amount := 1, elite := false) -> String:
+	if amount <= 0:
+		return ""
+	var progress_message := ""
+	var completed_message := ""
+	for contract_id in Data.CONTRACTS:
+		var definition: Dictionary = Data.CONTRACTS[contract_id]
+		var progress: Dictionary = profile["contracts"][contract_id]
+		if not bool(progress["accepted"]) or bool(progress["completed"]):
+			continue
+		if definition.has("destination") and str(definition["destination"]) != system_id:
+			continue
+		var matches := false
+		match str(definition["type"]):
+			"bounty":
+				matches = event_type == "kill"
+			"elite_bounty":
+				matches = event_type == "kill" and elite
+			"mining":
+				matches = event_type == "mining" and resource_id == str(definition["resource"])
+			"salvage":
+				matches = event_type == "salvage" and resource_id == str(definition["resource"])
+		if not matches:
+			continue
+		var target := int(definition["target"])
+		var before := int(progress["progress"])
+		var after := mini(target, before + amount)
+		if after == before:
+			continue
+		progress["progress"] = after
+		if event_type == "kill":
+			progress_message = "%s · %s %d/%d" % ["Elite destroyed" if elite else "Pirate destroyed", str(definition["name"]), after, target]
+		if after >= target and before < target:
+			completed_message = "Contract objective ready · " + str(definition["name"])
+	return completed_message if not completed_message.is_empty() else progress_message
+
 func _destroy_enemy(enemy: Dictionary) -> void:
 	var enemy_id := int(enemy["id"])
 	var death_pos: Vector2 = enemy["pos"]
@@ -605,12 +650,8 @@ func _destroy_enemy(enemy: Dictionary) -> void:
 	loot.append({"id": next_id, "pos": death_pos, "resource": "salvage", "amount": salvage, "rotation": 0.0})
 	next_id += 1
 	profile["total_kills"] = int(profile["total_kills"]) + 1
-	var bounty: Dictionary = profile["contracts"]["bounty"]
-	if bounty["accepted"] and not bounty["completed"]:
-		bounty["progress"] = mini(int(Data.CONTRACTS["bounty"]["target"]), int(bounty["progress"]) + 1)
-		notice.emit("Pirate destroyed · contract %d/%d" % [bounty["progress"], int(Data.CONTRACTS["bounty"]["target"])])
-	else:
-		notice.emit("Pirate destroyed · salvage ejected")
+	var contract_notice := record_contract_event("kill", "", 1, bool(enemy["elite"]))
+	notice.emit(contract_notice if not contract_notice.is_empty() else "Pirate destroyed · salvage ejected")
 	if target_id == enemy_id:
 		target_id = -1
 		target_kind = ""
@@ -636,6 +677,9 @@ func _update_mining(delta: float) -> void:
 		target["amount"] -= 1
 		add_cargo(str(target["resource"]), 1)
 		profile["total_mined"] = int(profile["total_mined"]) + 1
+		var contract_notice := record_contract_event("mining", str(target["resource"]), 1)
+		if not contract_notice.is_empty():
+			notice.emit(contract_notice)
 	if int(target["amount"]) <= 0:
 		var depleted_id := int(target["id"])
 		for i in range(asteroids.size() - 1, -1, -1):
@@ -713,7 +757,8 @@ func _update_loot(delta: float) -> void:
 		if distance < 55.0:
 			var accepted := add_cargo(str(item["resource"]), int(item["amount"]))
 			if accepted > 0:
-				notice.emit("Recovered %d %s" % [accepted, str(Data.RESOURCES[item["resource"]]["name"])])
+				var contract_notice := record_contract_event("salvage", str(item["resource"]), accepted)
+				notice.emit(contract_notice if not contract_notice.is_empty() else "Recovered %d %s" % [accepted, str(Data.RESOURCES[item["resource"]]["name"])])
 			if accepted >= int(item["amount"]):
 				loot.remove_at(i)
 			else:
@@ -850,13 +895,16 @@ func _draw_enemy(enemy: Dictionary) -> void:
 		draw_arc(enemy["pos"], 29, PI, PI + PI * clampf(ratio, 0.0, 1.0), 24, Color("ffe0a3"), 2.5, true)
 
 func _draw_player() -> void:
-	var color := Color("72f2ff")
-	var scale_factor := 1.15 if str(profile["ship"]) == "kestrel" else 0.95
-	_draw_ship_shape(player["pos"], float(player["angle"]), scale_factor, color, false)
+	var ship_id := str(profile["ship"])
+	var colors := {"wisp": Color("72f2ff"), "atlas": Color("ffd28a"), "razor": Color("8ab4ff"), "delver": Color("9ff0b3"), "kestrel": Color("c399ff")}
+	var scales := {"wisp": 0.95, "atlas": 1.22, "razor": 0.86, "delver": 1.18, "kestrel": 1.15}
+	var color: Color = colors.get(ship_id, Color("72f2ff"))
+	var scale_factor := float(scales.get(ship_id, 0.95))
+	_draw_ship_shape(player["pos"], float(player["angle"]), scale_factor, color, false, ship_id)
 	if player["since_damage"] < 0.35:
 		draw_arc(player["pos"], 34, 0, TAU, 48, Color("8df5ff"), 3.0, true)
 
-func _draw_ship_shape(pos: Vector2, angle: float, scale_factor: float, color: Color, hostile: bool) -> void:
+func _draw_ship_shape(pos: Vector2, angle: float, scale_factor: float, color: Color, hostile: bool, hull_id := "") -> void:
 	var velocity: Vector2 = player.get("vel", Vector2.ZERO) if not hostile else Vector2.ZERO
 	if not hostile and velocity.length() > 20.0:
 		var rear := pos - Vector2.from_angle(angle) * 28.0 * scale_factor
@@ -868,6 +916,12 @@ func _draw_ship_shape(pos: Vector2, angle: float, scale_factor: float, color: Co
 		Vector2(-9, -7), Vector2(-27, -5), Vector2(-18, 0),
 		Vector2(-27, 5), Vector2(-9, 7), Vector2(-13, 24), Vector2(4, 9)
 	])
+	if hull_id == "razor":
+		local_points = PackedVector2Array([
+			Vector2(36, 0), Vector2(-8, -8), Vector2(-26, -14),
+			Vector2(-17, -3), Vector2(-29, 0), Vector2(-17, 3),
+			Vector2(-26, 14), Vector2(-8, 8)
+		])
 	var points := PackedVector2Array()
 	for point in local_points:
 		points.append(pos + point.rotated(angle) * scale_factor)
@@ -878,6 +932,24 @@ func _draw_ship_shape(pos: Vector2, angle: float, scale_factor: float, color: Co
 	var core := pos + Vector2(-5, 0).rotated(angle) * scale_factor
 	draw_line(core, nose, Color(color, 0.70), 2.0, true)
 	draw_circle(core, 4.0 * scale_factor, color)
+	if not hostile:
+		match hull_id:
+			"atlas":
+				for side in [-1.0, 1.0]:
+					var pod := pos + Vector2(-12, 16 * side).rotated(angle) * scale_factor
+					draw_circle(pod, 6.0 * scale_factor, Color(color, 0.28))
+					draw_arc(pod, 6.0 * scale_factor, 0.0, TAU, 20, Color(color, 0.80), 1.5, true)
+			"delver":
+				for side in [-1.0, 1.0]:
+					var root := pos + Vector2(8, 8 * side).rotated(angle) * scale_factor
+					var tip := pos + Vector2(35, 13 * side).rotated(angle) * scale_factor
+					draw_line(root, tip, Color(color, 0.85), 2.5, true)
+					draw_circle(tip, 2.5 * scale_factor, color)
+			"kestrel":
+				for side in [-1.0, 1.0]:
+					var rear := pos + Vector2(-13, 18 * side).rotated(angle) * scale_factor
+					var front := pos + Vector2(12, 7 * side).rotated(angle) * scale_factor
+					draw_line(rear, front, Color(color, 0.72), 3.0, true)
 
 func _draw_effects() -> void:
 	for effect in effects:

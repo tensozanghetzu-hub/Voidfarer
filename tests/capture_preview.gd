@@ -45,14 +45,44 @@ func _run() -> void:
 	game.show_station_page("contracts")
 	await create_timer(0.3).timeout
 	root.get_texture().get_image().save_png("res://test-results/contracts.png")
+	station_content_scroll(game, 1000)
+	await create_timer(0.2).timeout
+	root.get_texture().get_image().save_png("res://test-results/contracts-new.png")
 	game.profile["credits"] = 10000
 	game.purchase_upgrade("laser")
 	await create_timer(0.3).timeout
 	root.get_texture().get_image().save_png("res://test-results/fitting.png")
+	game.ship_action("delver")
+	await create_timer(0.3).timeout
+	station_content_scroll(game, 1000)
+	await create_timer(0.2).timeout
+	root.get_texture().get_image().save_png("res://test-results/shipyard.png")
 	game.undock()
+	await create_timer(0.3).timeout
+	root.get_texture().get_image().save_png("res://test-results/flight-delver.png")
 	game.open_map()
 	await create_timer(0.4).timeout
 	root.get_texture().get_image().save_png("res://test-results/map.png")
+	if game.system_map._targets.is_empty():
+		push_error("System map produced no selectable contacts")
+		quit(1)
+		return
+	var contact: Dictionary = game.system_map._targets[0]
+	var click := InputEventMouseButton.new()
+	click.button_index = MOUSE_BUTTON_LEFT
+	click.pressed = true
+	click.position = contact["point"]
+	game.system_map._gui_input(click)
+	if int(world.target_id) != int(contact["id"]) or str(world.target_kind) != str(contact["kind"]):
+		push_error("System map contact did not become the world target")
+		quit(1)
+		return
+	print("PASS: tactical map contact selection locks a world target")
+	await create_timer(0.2).timeout
+	root.get_texture().get_image().save_png("res://test-results/map-selected.png")
+	game.show_map_page("galaxy")
+	await create_timer(0.3).timeout
+	root.get_texture().get_image().save_png("res://test-results/galaxy-map.png")
 	game.show_menu()
 	await create_timer(0.3).timeout
 	root.get_texture().get_image().save_png("res://test-results/menu.png")
@@ -86,3 +116,8 @@ func _run() -> void:
 	SaveManager.delete_save()
 	print("Preview images captured")
 	quit()
+
+func station_content_scroll(game: Node, position: int) -> void:
+	var scroll = game.station_content.get_parent()
+	if scroll is ScrollContainer:
+		scroll.scroll_vertical = position

@@ -4,6 +4,7 @@ const Data = preload("res://scripts/game_data.gd")
 const SaveManager = preload("res://scripts/save_manager.gd")
 const WorldScript = preload("res://scripts/space_world.gd")
 const JoystickScript = preload("res://scripts/touch_joystick.gd")
+const SystemMapScript = preload("res://scripts/system_map.gd")
 const UpdateManagerScript = preload("res://scripts/update_manager.gd")
 
 const CYAN := Color("69e8f2")
@@ -53,7 +54,13 @@ var station_content: VBoxContainer
 var station_notice: Label
 var station_page := "overview"
 var map_list: VBoxContainer
+var map_title: Label
 var map_subtitle: Label
+var map_help: Label
+var map_mode := "system"
+var system_map: Control
+var minimap: Control
+var galaxy_scroll: ScrollContainer
 var death_detail: Label
 
 var updater: Node
@@ -329,6 +336,18 @@ func _build_hud() -> void:
 	target_panel.size = Vector2(420, 96)
 	target_panel.visible = false
 
+	minimap = SystemMapScript.new()
+	hud.add_child(minimap)
+	minimap.name = "RadarMinimap"
+	minimap.anchor_left = 1.0
+	minimap.anchor_right = 1.0
+	minimap.offset_left = -226
+	minimap.offset_right = -16
+	minimap.offset_top = 88
+	minimap.offset_bottom = 268
+	minimap.configure(world, false)
+	minimap.opened.connect(open_map)
+
 	var status := PanelContainer.new()
 	hud.add_child(status)
 	status.theme = theme
@@ -435,21 +454,33 @@ func _build_station() -> void:
 	station_notice.visible = false
 
 func _build_map() -> void:
-	map_screen = _overlay("GalaxyMap")
-	var panel := _center_panel(map_screen, 950, 610)
+	map_screen = _overlay("NavigationMap")
+	var panel := _center_panel(map_screen, 1100, 630)
 	var outer := _vbox(_margin(panel, 22), 12)
 	var title_row := _hbox(outer, 12)
 	var titles := _vbox(title_row, 3)
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_label(titles, "GALAXY MAP", 28, CYAN)
+	map_title = _label(titles, "SYSTEM MAP", 28, CYAN)
 	map_subtitle = _label(titles, "", 14, MUTED)
+	_button(title_row, "SYSTEM", func(): show_map_page("system"), Vector2(105, 44))
+	_button(title_row, "GALAXY", func(): show_map_page("galaxy"), Vector2(105, 44))
 	_button(title_row, "RETURN TO FLIGHT", close_map, Vector2(190, 44))
-	_label(outer, "Plotting a route engages autopilot toward the local jump gate. Manual movement cancels the route.", 14, MUTED)
-	var scroll := ScrollContainer.new()
-	outer.add_child(scroll)
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	map_list = _vbox(scroll, 10)
+	map_help = _label(outer, "", 14, MUTED)
+	var pages := Control.new()
+	outer.add_child(pages)
+	pages.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	pages.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	system_map = SystemMapScript.new()
+	pages.add_child(system_map)
+	system_map.name = "TacticalSystemMap"
+	system_map.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	system_map.configure(world, true)
+	system_map.contact_selected.connect(_on_map_contact_selected)
+	galaxy_scroll = ScrollContainer.new()
+	pages.add_child(galaxy_scroll)
+	galaxy_scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	galaxy_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	map_list = _vbox(galaxy_scroll, 10)
 	map_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 func _build_pause() -> void:
@@ -487,7 +518,7 @@ func _build_updater() -> void:
 	update_version_label = _label(titles, "", 13, MUTED)
 	update_cancel_button = _button(title_row, "CANCEL", func(): updater.cancel(), Vector2(105, 42))
 	_button(title_row, "CLOSE", close_updater, Vector2(105, 42))
-	_label(outer, "Manual GitHub updates · no automatic checks · Android confirms every installation.", 14, MUTED)
+	_label(outer, "Manual GitHub updates · Android 12+ installs without confirmation when permitted, with fallback.", 14, MUTED)
 	update_status_label = _label(outer, "", 16, Color("ffd28a"))
 	update_status_label.custom_minimum_size.y = 48
 	update_progress_bar = _bar(outer, CYAN)
@@ -715,10 +746,10 @@ func _build_station_contracts() -> void:
 			status = "COMPLETED"
 			button_text = "CLAIMED"
 		elif progress["accepted"]:
-			if definition["type"] == "bounty":
-				status = "Progress · %d/%d" % [progress["progress"], definition["target"]]
-			else:
+			if definition["type"] == "delivery":
 				status = "Cargo · %d/%d" % [profile["cargo"][definition["resource"]], definition["target"]]
+			else:
+				status = "Progress · %d/%d" % [progress["progress"], definition["target"]]
 			button_text = "CLAIM"
 		_label(text_box, status, 13, CYAN)
 		var action := _button(row, button_text, func(): contract_action(contract_id), Vector2(130, 48))
@@ -736,12 +767,12 @@ func contract_action(contract_id: String) -> void:
 		show_station_page("contracts")
 		return
 	var ready := false
-	if definition["type"] == "bounty":
-		ready = int(progress["progress"]) >= int(definition["target"])
-	else:
+	if definition["type"] == "delivery":
 		ready = int(profile["cargo"][definition["resource"]]) >= int(definition["target"])
 		if definition.has("destination") and str(definition["destination"]) != world.system_id:
 			ready = false
+	else:
+		ready = int(progress["progress"]) >= int(definition["target"])
 	if not ready:
 		show_notice("Contract requirements are not yet complete")
 		return
@@ -775,18 +806,25 @@ func _build_station_fitting() -> void:
 		var button := _button(row, "MAXIMUM" if level >= 3 else "%s CR" % _number(cost), func(): purchase_upgrade(upgrade_id), Vector2(145, 44))
 		button.disabled = level >= 3
 	_spacer(station_content, 6)
-	if str(profile["ship"]) != "kestrel":
+	_label(station_content, "SHIPYARD", 20, CYAN)
+	_label(station_content, "Purchased hulls remain registered and can be refitted at any station. Fitting includes repair and capacitor recharge.", 14, MUTED)
+	for ship_id in Data.SHIPS:
+		var candidate: Dictionary = Data.SHIPS[ship_id]
+		var candidate_stats := Data.ship_stats(profile, str(ship_id))
 		var panel := PanelContainer.new()
 		station_content.add_child(panel)
 		panel.theme = theme
 		var row := _hbox(_margin(panel, 12), 16)
 		var text_box := _vbox(row, 4)
 		text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_label(text_box, "VF-7 Kestrel · Assault Destroyer", 19, Color("ffd28a"))
-		_label(text_box, "A substantial combat and cargo upgrade. Purchase includes immediate fitting, repair and registration.", 14, MUTED)
-		_button(row, "4,800 CR", purchase_kestrel, Vector2(150, 48))
-	else:
-		_label(station_content, "VF-7 Kestrel installed · your current hull is the highest available in First Light.", 15, Color("ffd28a"))
+		_label(text_box, "%s · %s" % [candidate["name"], candidate["class"]], 19, Color("ffd28a") if str(profile["ship"]) == str(ship_id) else TEXT)
+		_label(text_box, str(candidate["description"]), 14, MUTED)
+		_label(text_box, "Damage %.0f  ·  Shield %d  ·  Cargo %d  ·  Velocity %d  ·  Mining %.1f" % [candidate_stats["damage"], int(candidate_stats["shield"]), int(candidate_stats["cargo"]), int(candidate_stats["speed"]), float(candidate_stats["mining_rate"])], 13, MUTED)
+		var button_text := "FITTED"
+		if str(profile["ship"]) != str(ship_id):
+			button_text = "FIT" if profile["owned_ships"].has(ship_id) else "%s CR" % _number(candidate["cost"])
+		var action := _button(row, button_text, func(): ship_action(str(ship_id)), Vector2(150, 48))
+		action.disabled = str(profile["ship"]) == str(ship_id)
 
 func purchase_upgrade(upgrade_id: String) -> void:
 	var level := int(profile["upgrades"][upgrade_id])
@@ -804,18 +842,31 @@ func purchase_upgrade(upgrade_id: String) -> void:
 	show_notice("%s upgraded to rank %d" % [Data.upgrade_name(upgrade_id), level + 1])
 	show_station_page("fitting")
 
-func purchase_kestrel() -> void:
-	var cost := int(Data.SHIPS["kestrel"]["cost"])
-	if int(profile["credits"]) < cost:
-		show_notice("Insufficient credits for the Kestrel")
+func ship_action(ship_id: String) -> void:
+	if not Data.SHIPS.has(ship_id) or str(profile["ship"]) == ship_id:
 		return
-	profile["credits"] -= cost
-	profile["ship"] = "kestrel"
+	var candidate_stats := Data.ship_stats(profile, ship_id)
+	if Data.cargo_used(profile) > int(candidate_stats["cargo"]):
+		show_notice("Cargo exceeds this hull's %d-unit capacity" % int(candidate_stats["cargo"]))
+		return
+	var already_owned: bool = profile["owned_ships"].has(ship_id)
+	var cost := int(Data.SHIPS[ship_id]["cost"])
+	if not already_owned:
+		if int(profile["credits"]) < cost:
+			show_notice("Insufficient credits for %s" % str(Data.SHIPS[ship_id]["name"]))
+			return
+		profile["credits"] -= cost
+		profile["owned_ships"].append(ship_id)
+	profile["ship"] = ship_id
 	world.apply_upgrades()
 	world.repair_and_recharge()
 	save_game()
-	show_notice("VF-7 Kestrel registered and ready")
-	open_station()
+	show_notice("%s %s" % [str(Data.SHIPS[ship_id]["name"]), "fitted" if already_owned else "purchased and fitted"])
+	station_subtitle.text = "%s  ·  Security %.1f  ·  %s" % [world.system["name"], float(world.system["security"]), str(Data.SHIPS[profile["ship"]]["name"])]
+	show_station_page("fitting")
+
+func purchase_kestrel() -> void:
+	ship_action("kestrel")
 
 func open_map() -> void:
 	if state != "space":
@@ -823,7 +874,29 @@ func open_map() -> void:
 	state = "map"
 	world.set_active(false)
 	map_screen.visible = true
-	map_subtitle.text = "%s  ·  Jump gate %.0f m" % [world.system["name"], world.gate_distance()]
+	show_map_page("system")
+
+func show_map_page(page: String) -> void:
+	map_mode = "galaxy" if page == "galaxy" else "system"
+	system_map.visible = map_mode == "system"
+	galaxy_scroll.visible = map_mode == "galaxy"
+	if map_mode == "system":
+		map_title.text = "SYSTEM MAP"
+		var hostile_count := "%d hostiles" % world.enemies.size() if world.enemies.size() != 1 else "1 hostile"
+		map_subtitle.text = "%s  ·  %d asteroids  ·  %s" % [world.system["name"], world.asteroids.size(), hostile_count]
+		map_help.text = "Live tactical chart · tap an asteroid or pirate to lock it, then return to flight. Tap GALAXY for gate routes."
+		system_map.queue_redraw()
+	else:
+		map_title.text = "GALAXY MAP"
+		map_subtitle.text = "%s  ·  Jump gate %.0f m" % [world.system["name"], world.gate_distance()]
+		map_help.text = "Plotting a route engages autopilot toward the local jump gate. Manual movement cancels the route."
+		_rebuild_galaxy_list()
+
+func _on_map_contact_selected(title: String) -> void:
+	map_subtitle.text = "Target locked · %s · return to flight to engage" % title
+	_update_hud()
+
+func _rebuild_galaxy_list() -> void:
 	for child in map_list.get_children():
 		map_list.remove_child(child)
 		child.queue_free()
@@ -911,10 +984,10 @@ func show_flight_manual() -> void:
 	_label(box, "TOUCH", 16, Color("ffd28a"))
 	_label(box, "Drag the left stick to thrust. Tap a ship or asteroid to target it. Use ORBIT to approach and circle the target; FIRE and MINE activate your equipment. DOCK plots an approach when you are far from the station.", 15, MUTED)
 	_label(box, "KEYBOARD", 16, Color("ffd28a"))
-	_label(box, "WASD / arrows: thrust  ·  Space: fire  ·  Tab: cycle target  ·  M: mining  ·  T: tractor  ·  O: orbit  ·  F: dock  ·  G: galaxy map  ·  Esc: pause / back", 15, MUTED)
+	_label(box, "WASD / arrows: thrust  ·  Space: fire  ·  Tab: cycle target  ·  M: mining  ·  T: tractor  ·  O: orbit  ·  F: dock  ·  G: system map  ·  Esc: pause / back", 15, MUTED)
 	_label(box, "YOUR FIRST FLIGHT", 16, Color("ffd28a"))
-	_label(box, "Mine Ferrite Ore, recover salvage from pirates, then dock to sell cargo. Accept contracts for larger payouts. Upgrade the Wisp or save for the Kestrel. Higher-risk systems offer better market prices and richer crystal fields.", 15, MUTED)
-	_label(box, "Travel by opening MAP, plotting a connected system, and letting autopilot carry you to the jump gate. Any manual movement cancels autopilot.", 15, MUTED)
+	_label(box, "Mine ore, recover salvage and complete contract objectives for payouts. The shipyard offers specialized cargo, interceptor, mining and assault hulls; purchased ships can be refitted later.", 15, MUTED)
+	_label(box, "The live radar shows nearby contacts. Tap it or MAP for the full system chart; tap a contact there to target it. Use the GALAXY tab to plot gate routes. Manual movement cancels autopilot.", 15, MUTED)
 	_button(box, "CLOSE", func(): manual.queue_free(), Vector2(0, 48))
 
 func _process(delta: float) -> void:

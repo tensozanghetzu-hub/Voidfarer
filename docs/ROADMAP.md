@@ -37,23 +37,32 @@
 - [x] Legacy installer fallback, cancellation handling, and session cleanup remain intact
 - [x] Static native-updater regressions and merged-APK verification
 
+## 0.3.0 — Navigation, contracts and shipyard
+
+- [x] Live 1,600 m radar minimap with station, gate, asteroid, pirate and salvage contacts
+- [x] Full tactical system map with contact targeting and a separate galaxy-route page
+- [x] Elite bounty, mining-survey and salvage-recovery objectives alongside existing contracts
+- [x] Atlas cargo hauler, Razor interceptor and Delver mining barge join Wisp and Kestrel
+- [x] Persistent owned-hull registry, free refitting and legacy-save migration
+- [x] Expanded gameplay regressions and rendered navigation/shipyard checks
+
 ## Candidate next milestones
 
-### 0.3 — Frontier economy
+### 0.4 — Frontier economy
 
 - Station stock and price response to player/NPC trade
 - Additional trade goods and cargo routes
 - Repeatable and procedurally generated contracts
 - Manufacturing and module research
 
-### 0.4 — Living systems
+### 0.5 — Living systems
 
 - NPC miners, traders, and patrols
 - Faction reputation and local security response
 - Persistent asteroid depletion and market inventories
 - Simulated faction control changes
 
-### 0.5 — Greater void
+### 0.6 — Greater void
 
 - Seeded expansion to 20+ systems
 - Exploration and signal scanning

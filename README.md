@@ -11,9 +11,10 @@
 - Pirate AI, elite encounters, tractor-beam salvage recovery, and ship destruction
 - Station docking with free repair and capacitor recharge
 - Regional commodity markets
-- Bounty and delivery contracts
-- Four three-rank upgrade paths and a purchasable destroyer
+- Bounty, elite-hunt, mining, salvage-recovery and delivery contracts
+- Four three-rank upgrade paths and five ownable ships with cargo, interceptor, mining and assault roles
 - Autopilot routes through the local jump-gate network
+- Live radar minimap and full tactical system map with touch contact targeting
 - Local JSON save/continue and insurance recovery
 - Manual GitHub update checks, verified downloads, and Android 12+ no-user-action self-updates when permitted, with confirmation fallback
 - Original procedural visuals and application icon
@@ -31,7 +32,8 @@
 - **ORBIT:** automatically approach and orbit the selected target
 - **TARGET:** cycle available targets by distance
 - **DOCK:** dock nearby or plot an approach to the station
-- **MAP:** select a connected system and plot a gate route
+- **MAP / radar tap:** open the tactical system map; tap contacts to target them
+- **GALAXY tab:** select a connected system and plot a gate route
 
 Manual thrust cancels autopilot. The Android back button pauses or closes the current panel.
 
@@ -50,7 +52,7 @@ From v0.2.0 onward, choose **CHECK FOR UPDATES** on the main menu and download a
 | T | Toggle salvage tractor |
 | O | Toggle automatic orbit |
 | F | Dock / approach station |
-| G | Galaxy map |
+| G | System / galaxy map |
 | Escape | Pause / back |
 
 ## First-flight route
@@ -59,7 +61,7 @@ From v0.2.0 onward, choose **CHECK FOR UPDATES** on the main menu and download a
 2. Target a pirate, engage **ORBIT**, then **FIRE**.
 3. Engage **TRACTOR** to pull in salvage, or fly through it manually.
 4. Dock, sell cargo, and accept a contract.
-5. Buy upgrades or save for the **VF-7 Kestrel**.
+5. Buy upgrades or choose a specialized shipyard hull, including the **Atlas**, **Razor**, **Delver**, and **Kestrel**.
 6. Use the map to transport goods between regional markets.
 
 ## Technology

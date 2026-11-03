@@ -2,7 +2,7 @@
 
 ## Install the current APK
 
-The current build is an **ARM64 Android debug APK**, package `com.tensozanghetzu.voidfarer`, version `0.2.3` (`versionCode=5`).
+The current build is an **ARM64 Android debug APK**, package `com.tensozanghetzu.voidfarer`, version `0.3.0` (`versionCode=6`).
 
 1. Copy `Voidfarer.apk` to an ARM64 Android phone or tablet.
 2. Open it with the device's file manager. If Android asks, allow that file manager to install unknown apps.

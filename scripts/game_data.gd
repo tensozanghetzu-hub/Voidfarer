@@ -1,6 +1,6 @@
 extends RefCounted
 
-const GAME_VERSION := "0.2.3"
+const GAME_VERSION := "0.3.0"
 const SAVE_NAME := "Voidfarer"
 
 const RESOURCES := {
@@ -72,6 +72,7 @@ const SHIPS := {
 	"wisp": {
 		"name": "VF-1 Wisp",
 		"class": "Scout Frigate",
+		"description": "A balanced starter hull for scouting, light combat and first mining flights.",
 		"cost": 0,
 		"shield": 120.0,
 		"armor": 80.0,
@@ -85,9 +86,61 @@ const SHIPS := {
 		"range": 560.0,
 		"mining_rate": 4.0
 	},
+	"atlas": {
+		"name": "VF-2 Atlas",
+		"class": "Cargo Hauler",
+		"description": "A broad freight hull with the largest cargo lattice and reinforced armor.",
+		"cost": 2400,
+		"shield": 180.0,
+		"armor": 135.0,
+		"hull": 115.0,
+		"energy": 140.0,
+		"speed": 220.0,
+		"acceleration": 165.0,
+		"cargo": 190,
+		"damage": 14.0,
+		"fire_interval": 0.40,
+		"range": 550.0,
+		"mining_rate": 4.5
+	},
+	"razor": {
+		"name": "VF-4 Razor",
+		"class": "Interceptor",
+		"description": "A fast strike ship with rapid laser cycling, high agility and a small hold.",
+		"cost": 3300,
+		"shield": 150.0,
+		"armor": 90.0,
+		"hull": 75.0,
+		"energy": 150.0,
+		"speed": 345.0,
+		"acceleration": 285.0,
+		"cargo": 50,
+		"damage": 21.0,
+		"fire_interval": 0.23,
+		"range": 590.0,
+		"mining_rate": 3.0
+	},
+	"delver": {
+		"name": "VF-5 Delver",
+		"class": "Mining Barge",
+		"description": "A rugged industrial platform with a large capacitor and high-yield mining array.",
+		"cost": 3900,
+		"shield": 200.0,
+		"armor": 155.0,
+		"hull": 140.0,
+		"energy": 190.0,
+		"speed": 210.0,
+		"acceleration": 160.0,
+		"cargo": 145,
+		"damage": 15.0,
+		"fire_interval": 0.36,
+		"range": 560.0,
+		"mining_rate": 9.0
+	},
 	"kestrel": {
 		"name": "VF-7 Kestrel",
 		"class": "Assault Destroyer",
+		"description": "A heavy combat hull balancing strong lasers, defenses and extended range.",
 		"cost": 4800,
 		"shield": 230.0,
 		"armor": 145.0,
@@ -127,6 +180,30 @@ const CONTRACTS := {
 		"reward": 900,
 		"destination": "lumen",
 		"description": "Deliver 12 units of Veld Crystal to Lumen Exchange in Lumen Drift."
+	},
+	"revenant_hunt": {
+		"name": "The Revenant",
+		"type": "elite_bounty",
+		"target": 1,
+		"reward": 1600,
+		"destination": "umbra",
+		"description": "Destroy the Revenant Captain in Umbra Verge, then claim the bounty at any station."
+	},
+	"salvage_sweep": {
+		"name": "Salvage Sweep",
+		"type": "salvage",
+		"resource": "salvage",
+		"target": 18,
+		"reward": 1200,
+		"description": "Recover 18 units of Ship Salvage from pirate wrecks. Recovered cargo is yours to keep."
+	},
+	"deep_core_survey": {
+		"name": "Deep Core Survey",
+		"type": "mining",
+		"resource": "crystal",
+		"target": 24,
+		"reward": 1050,
+		"description": "Mine 24 units of Veld Crystal for the survey team. Mined cargo is yours to keep."
 	}
 }
 
@@ -138,6 +215,7 @@ static func default_profile() -> Dictionary:
 		"version": 1,
 		"credits": 650,
 		"ship": "wisp",
+		"owned_ships": ["wisp"],
 		"current_system": "haven",
 		"cargo": {"ferrite": 0, "crystal": 0, "salvage": 0},
 		"upgrades": {"laser": 0, "shield": 0, "engine": 0, "cargo": 0},
@@ -169,10 +247,25 @@ static func normalize_profile(profile: Dictionary) -> Dictionary:
 		profile["ship"] = "wisp"
 	if not SYSTEMS.has(profile["current_system"]):
 		profile["current_system"] = "haven"
+	if not profile["owned_ships"] is Array:
+		profile["owned_ships"] = ["wisp"]
+	var owned: Array = []
+	for ship_id in profile["owned_ships"]:
+		var clean_id := str(ship_id)
+		if SHIPS.has(clean_id) and not owned.has(clean_id):
+			owned.append(clean_id)
+	if owned.is_empty():
+		owned.append("wisp")
+	if not owned.has(str(profile["ship"])):
+		owned.append(str(profile["ship"]))
+	profile["owned_ships"] = owned
 	return profile
 
-static func ship_stats(profile: Dictionary) -> Dictionary:
-	var stats: Dictionary = SHIPS[profile["ship"]].duplicate(true)
+static func ship_stats(profile: Dictionary, ship_override := "") -> Dictionary:
+	var ship_id := str(profile["ship"]) if ship_override.is_empty() else ship_override
+	if not SHIPS.has(ship_id):
+		ship_id = "wisp"
+	var stats: Dictionary = SHIPS[ship_id].duplicate(true)
 	var upgrades: Dictionary = profile["upgrades"]
 	stats["shield"] += float(upgrades["shield"]) * 45.0
 	stats["energy"] += float(upgrades["shield"]) * 10.0
