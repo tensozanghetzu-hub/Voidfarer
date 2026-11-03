@@ -1,0 +1,21 @@
+# Godot editor and imported resources
+.godot/
+
+# Generated builds and test output
+build/
+dist/
+test-results/
+*.apk
+*.aab
+*.idsig
+*.log
+*.keystore
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+*.tmp
+*.bak
+
+# Local environment
+.env
