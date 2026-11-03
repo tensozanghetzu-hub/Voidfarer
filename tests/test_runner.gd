@@ -44,6 +44,18 @@ func _run() -> void:
 	check(Data.cargo_used(game.profile) > 0, "mining transfers ore into cargo")
 	check(int(game.profile["total_mined"]) > 0, "mining updates lifetime statistics")
 	world.mining = false
+	var depleted_id := int(asteroid["id"])
+	asteroid["amount"] = 1
+	world.mining = true
+	world.mine_accumulator = 0.0
+	for i in range(180):
+		world.simulate(1.0 / 60.0)
+	var depleted_asteroid_present := false
+	for rock in world.asteroids:
+		if int(rock["id"]) == depleted_id:
+			depleted_asteroid_present = true
+	check(not depleted_asteroid_present, "depleted asteroid disappears")
+	check(world.target_id != depleted_id and not world.mining, "depletion clears target and mining")
 
 	# Combat and loot simulation.
 	var enemy: Dictionary = world.enemies[0]
@@ -60,6 +72,17 @@ func _run() -> void:
 	check(world.loot.size() > 0, "destroyed pirate ejects salvage")
 	world.firing = false
 	world.auto_orbit = false
+	var salvage: Dictionary = world.loot[0]
+	salvage["pos"] = world.player["pos"] + Vector2(500, 0)
+	var cargo_before_tractor := Data.cargo_used(game.profile)
+	world.toggle_tractor()
+	check(world.tractor_active, "salvage tractor can be engaged")
+	for i in range(300):
+		world.simulate(1.0 / 60.0)
+		if world.loot.is_empty():
+			break
+	check(world.loot.is_empty() and Data.cargo_used(game.profile) > cargo_before_tractor, "tractor pulls salvage into cargo")
+	world.tractor_active = false
 
 	# Docked services and economy.
 	game.profile["credits"] = 10000
@@ -84,6 +107,7 @@ func _run() -> void:
 	game.purchase_upgrade("laser")
 	check(int(game.profile["upgrades"]["laser"]) == 1, "fitting purchases laser rank")
 	check(float(world.stats["damage"]) > old_damage, "laser rank improves weapon damage")
+	check(game.station_credits_label.visible and game.station_credits_label.text == "%s CR" % game._number(game.profile["credits"]), "fitting keeps credit balance visible")
 	game.show_station_page("market")
 	game.show_station_page("contracts")
 	game.show_station_page("fitting")

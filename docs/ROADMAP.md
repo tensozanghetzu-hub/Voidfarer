@@ -23,6 +23,13 @@
 - [x] Keep selected-target information in a bounded compact card
 - [x] Prevent target-label wrapping from expanding the flight HUD
 
+## 0.2.2 — Salvage and station usability
+
+- [x] Toggleable 620 m salvage tractor with visible beam and cargo recovery
+- [x] Depleted asteroids disappear and release target/mining state
+- [x] Persistent station wallet remains visible during fitting purchases
+- [x] Gameplay regression checks for all three behaviors
+
 ## Candidate next milestones
 
 ### 0.3 — Frontier economy

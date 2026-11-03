@@ -1,6 +1,8 @@
 extends Node2D
 
 const Data = preload("res://scripts/game_data.gd")
+const TRACTOR_RANGE := 620.0
+const TRACTOR_SPEED := 420.0
 
 signal notice(text: String)
 signal dock_requested
@@ -22,6 +24,7 @@ var active := false
 var input_vector := Vector2.ZERO
 var firing := false
 var mining := false
+var tractor_active := false
 var auto_orbit := false
 var auto_dock := false
 var route_destination := ""
@@ -69,6 +72,7 @@ func load_system(id: String, from_gate := false, restore_position := false) -> v
 	target_id = -1
 	firing = false
 	mining = false
+	tractor_active = false
 	auto_orbit = false
 	auto_dock = false
 	route_destination = ""
@@ -176,6 +180,7 @@ func set_active(value: bool) -> void:
 	if not active:
 		firing = false
 		mining = false
+		tractor_active = false
 		input_vector = Vector2.ZERO
 
 func update_saved_state() -> void:
@@ -220,6 +225,7 @@ func respawn_at_station() -> void:
 	camera_pos = player["pos"]
 	target_kind = ""
 	target_id = -1
+	tractor_active = false
 	auto_orbit = false
 	auto_dock = false
 	route_destination = ""
@@ -324,6 +330,17 @@ func toggle_mine() -> void:
 		notice.emit("Mining laser engaged")
 	else:
 		mine_accumulator = 0.0
+
+func toggle_tractor() -> void:
+	tractor_active = not tractor_active
+	if tractor_active:
+		if cargo_free() <= 0:
+			tractor_active = false
+			notice.emit("Cargo hold full · salvage tractor unavailable")
+		else:
+			notice.emit("Salvage tractor engaged · 620 m range")
+	else:
+		notice.emit("Salvage tractor disengaged")
 
 func toggle_orbit() -> void:
 	auto_orbit = not auto_orbit
@@ -620,10 +637,16 @@ func _update_mining(delta: float) -> void:
 		add_cargo(str(target["resource"]), 1)
 		profile["total_mined"] = int(profile["total_mined"]) + 1
 	if int(target["amount"]) <= 0:
+		var depleted_id := int(target["id"])
+		for i in range(asteroids.size() - 1, -1, -1):
+			if int(asteroids[i]["id"]) == depleted_id:
+				asteroids.remove_at(i)
+				break
 		notice.emit("Asteroid depleted")
 		target_id = -1
 		target_kind = ""
 		mining = false
+		mine_accumulator = 0.0
 		auto_orbit = false
 
 func _update_enemies(delta: float) -> void:
@@ -672,13 +695,22 @@ func _damage_player(amount: float) -> void:
 		active = false
 		firing = false
 		mining = false
+		tractor_active = false
 		destruction_requested.emit()
 
 func _update_loot(delta: float) -> void:
+	if tractor_active and cargo_free() <= 0:
+		tractor_active = false
+		notice.emit("Cargo hold full · salvage tractor disengaged")
 	for i in range(loot.size() - 1, -1, -1):
 		var item: Dictionary = loot[i]
 		item["rotation"] = float(item["rotation"]) + delta
-		if player["pos"].distance_to(item["pos"]) < 55.0:
+		var distance: float = player["pos"].distance_to(item["pos"])
+		item["tractored"] = tractor_active and distance <= TRACTOR_RANGE
+		if bool(item["tractored"]):
+			item["pos"] = item["pos"].move_toward(player["pos"], TRACTOR_SPEED * delta)
+			distance = player["pos"].distance_to(item["pos"])
+		if distance < 55.0:
 			var accepted := add_cargo(str(item["resource"]), int(item["amount"]))
 			if accepted > 0:
 				notice.emit("Recovered %d %s" % [accepted, str(Data.RESOURCES[item["resource"]]["name"])])
@@ -795,6 +827,10 @@ func _draw_asteroid(asteroid: Dictionary) -> void:
 func _draw_loot(item: Dictionary) -> void:
 	var color := Color(str(Data.RESOURCES[item["resource"]]["color"]))
 	var pos: Vector2 = item["pos"]
+	if tractor_active and bool(item.get("tractored", false)):
+		draw_line(player["pos"], pos, Color(color, 0.14), 10.0, true)
+		draw_line(player["pos"], pos, Color(color, 0.82), 2.0, true)
+		draw_arc(pos, 22.0 + sin(visual_time * 8.0) * 3.0, 0.0, TAU, 28, Color(color, 0.65), 2.0, true)
 	var r := 13.0 + sin(visual_time * 3.0 + float(item["id"])) * 2.0
 	var points := PackedVector2Array()
 	for i in range(4):

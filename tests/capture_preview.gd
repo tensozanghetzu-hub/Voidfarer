@@ -26,6 +26,16 @@ func _run() -> void:
 	world.auto_orbit = true
 	await create_timer(0.7).timeout
 	root.get_texture().get_image().save_png("res://test-results/flight.png")
+	world.mining = false
+	world.auto_orbit = false
+	world._damage_enemy(world.enemies[0], 100000.0)
+	var salvage: Dictionary = world.loot[0]
+	salvage["pos"] = world.player["pos"] + Vector2(430, -120)
+	world.toggle_tractor()
+	await create_timer(0.25).timeout
+	game._update_hud()
+	root.get_texture().get_image().save_png("res://test-results/tractor.png")
+	world.tractor_active = false
 	game.open_station()
 	await create_timer(0.4).timeout
 	root.get_texture().get_image().save_png("res://test-results/station.png")
@@ -35,7 +45,8 @@ func _run() -> void:
 	game.show_station_page("contracts")
 	await create_timer(0.3).timeout
 	root.get_texture().get_image().save_png("res://test-results/contracts.png")
-	game.show_station_page("fitting")
+	game.profile["credits"] = 10000
+	game.purchase_upgrade("laser")
 	await create_timer(0.3).timeout
 	root.get_texture().get_image().save_png("res://test-results/fitting.png")
 	game.undock()

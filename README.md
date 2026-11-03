@@ -7,8 +7,8 @@
 - Four connected star systems with distinct security, markets, and procedural environments
 - Real-time flight with touch joystick and keyboard controls
 - Target locking, automatic orbit, pulse-laser combat, and capacitor management
-- Mineable ferrite and crystal asteroids
-- Pirate AI, elite encounters, salvage recovery, and ship destruction
+- Mineable ferrite and crystal asteroids that disappear when depleted
+- Pirate AI, elite encounters, tractor-beam salvage recovery, and ship destruction
 - Station docking with free repair and capacitor recharge
 - Regional commodity markets
 - Bounty and delivery contracts
@@ -27,6 +27,7 @@
 - **Tap a ship or asteroid:** target it
 - **FIRE:** engage the selected pirate or nearest pirate
 - **MINE:** engage the selected asteroid or nearest asteroid
+- **TRACTOR:** pull salvage within 620 m into your cargo hold
 - **ORBIT:** automatically approach and orbit the selected target
 - **TARGET:** cycle available targets by distance
 - **DOCK:** dock nearby or plot an approach to the station
@@ -46,6 +47,7 @@ From v0.2.0 onward, choose **CHECK FOR UPDATES** on the main menu, download a ne
 | Space | Fire pulse laser |
 | Tab | Cycle target |
 | M | Toggle mining |
+| T | Toggle salvage tractor |
 | O | Toggle automatic orbit |
 | F | Dock / approach station |
 | G | Galaxy map |
@@ -55,7 +57,7 @@ From v0.2.0 onward, choose **CHECK FOR UPDATES** on the main menu, download a ne
 
 1. Select an asteroid and engage **MINE**.
 2. Target a pirate, engage **ORBIT**, then **FIRE**.
-3. Fly through salvage to recover it.
+3. Engage **TRACTOR** to pull in salvage, or fly through it manually.
 4. Dock, sell cargo, and accept a contract.
 5. Buy upgrades or save for the **VF-7 Kestrel**.
 6. Use the map to transport goods between regional markets.

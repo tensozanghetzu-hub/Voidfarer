@@ -45,7 +45,9 @@ var fire_button: Button
 var mine_button: Button
 var orbit_button: Button
 var dock_button: Button
+var tractor_button: Button
 var station_title: Label
+var station_credits_label: Label
 var station_subtitle: Label
 var station_content: VBoxContainer
 var station_notice: Label
@@ -106,6 +108,7 @@ func _register_inputs() -> void:
 	_add_key_action("move_down", [KEY_S, KEY_DOWN])
 	_add_key_action("fire", [KEY_SPACE])
 	_add_key_action("mine", [KEY_M])
+	_add_key_action("tractor", [KEY_T])
 	_add_key_action("orbit", [KEY_O])
 	_add_key_action("dock", [KEY_F])
 	_add_key_action("target", [KEY_TAB])
@@ -382,7 +385,7 @@ func _build_hud() -> void:
 	orbit_button = _button(grid, "ORBIT", func(): world.toggle_orbit(), Vector2(110, 66))
 	_button(grid, "TARGET", func(): world.cycle_target(), Vector2(110, 66))
 	dock_button = _button(grid, "DOCK", func(): world.request_dock(), Vector2(110, 66))
-	_button(grid, "MAP", open_map, Vector2(110, 66))
+	tractor_button = _button(grid, "TRACTOR", func(): world.toggle_tractor(), Vector2(110, 66))
 
 	hint_label = _label(hud, "", 13, MUTED)
 	hint_label.anchor_left = 0.02
@@ -407,6 +410,11 @@ func _build_station() -> void:
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	station_title = _label(titles, "ASTERION ANCHORAGE", 27, CYAN)
 	station_subtitle = _label(titles, "Docked", 14, MUTED)
+	station_credits_label = _label(header, "", 18, Color("ffd28a"))
+	station_credits_label.custom_minimum_size = Vector2(150, 44)
+	station_credits_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	station_credits_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	station_credits_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_button(header, "SAVE", func(): save_game(); show_notice("Flight saved"), Vector2(110, 44))
 	_button(header, "UNDOCK", undock, Vector2(140, 44))
 	var navigation := _hbox(outer, 8)
@@ -618,6 +626,7 @@ func show_station_page(page: String) -> void:
 			_build_station_contracts()
 		"fitting":
 			_build_station_fitting()
+	_update_hud()
 
 func _build_station_overview() -> void:
 	_label(station_content, "COMMAND DECK", 20, CYAN)
@@ -902,7 +911,7 @@ func show_flight_manual() -> void:
 	_label(box, "TOUCH", 16, Color("ffd28a"))
 	_label(box, "Drag the left stick to thrust. Tap a ship or asteroid to target it. Use ORBIT to approach and circle the target; FIRE and MINE activate your equipment. DOCK plots an approach when you are far from the station.", 15, MUTED)
 	_label(box, "KEYBOARD", 16, Color("ffd28a"))
-	_label(box, "WASD / arrows: thrust  ·  Space: fire  ·  Tab: cycle target  ·  M: mining  ·  O: orbit  ·  F: dock  ·  G: galaxy map  ·  Esc: pause / back", 15, MUTED)
+	_label(box, "WASD / arrows: thrust  ·  Space: fire  ·  Tab: cycle target  ·  M: mining  ·  T: tractor  ·  O: orbit  ·  F: dock  ·  G: galaxy map  ·  Esc: pause / back", 15, MUTED)
 	_label(box, "YOUR FIRST FLIGHT", 16, Color("ffd28a"))
 	_label(box, "Mine Ferrite Ore, recover salvage from pirates, then dock to sell cargo. Accept contracts for larger payouts. Upgrade the Wisp or save for the Kestrel. Higher-risk systems offer better market prices and richer crystal fields.", 15, MUTED)
 	_label(box, "Travel by opening MAP, plotting a connected system, and letting autopilot carry you to the jump gate. Any manual movement cancels autopilot.", 15, MUTED)
@@ -926,6 +935,7 @@ func _update_hud() -> void:
 	security_label.text = "SEC %.1f" % float(world.system["security"])
 	security_label.add_theme_color_override("font_color", Color("79e5b7") if float(world.system["security"]) >= 0.5 else Color("ff9a78"))
 	credits_label.text = "%s CR" % _number(profile["credits"])
+	station_credits_label.text = "%s CR" % _number(profile["credits"])
 	cargo_label.text = "CARGO %d/%d" % [Data.cargo_used(profile), int(world.stats["cargo"])]
 	var player: Dictionary = world.player
 	shield_bar.max_value = world.stats["shield"]
@@ -955,6 +965,7 @@ func _update_hud() -> void:
 	fire_button.text = "FIRING" if world.firing else "FIRE"
 	mine_button.text = "MINING" if world.mining else "MINE"
 	orbit_button.text = "ORBITING" if world.auto_orbit else "ORBIT"
+	tractor_button.text = "TRACTOR ON" if world.tractor_active else "TRACTOR"
 	dock_button.text = "DOCK READY" if world.station_distance() <= 285.0 else "DOCK"
 	if int(profile["total_mined"]) < 10:
 		hint_label.text = "FLIGHT TIP  ·  Select an asteroid and engage MINE. Stay within 265 m."
@@ -971,6 +982,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif state == "space":
 		if event.is_action_pressed("mine"):
 			world.toggle_mine()
+		elif event.is_action_pressed("tractor"):
+			world.toggle_tractor()
 		elif event.is_action_pressed("orbit"):
 			world.toggle_orbit()
 		elif event.is_action_pressed("dock"):
