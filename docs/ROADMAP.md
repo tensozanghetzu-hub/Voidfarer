@@ -30,6 +30,13 @@
 - [x] Persistent station wallet remains visible during fitting purchases
 - [x] Gameplay regression checks for all three behaviors
 
+## 0.2.3 — Smoother direct updates
+
+- [x] Android 12+ PackageInstaller self-updates request no user action
+- [x] Private status receiver opens Android's confirmation when still required
+- [x] Legacy installer fallback, cancellation handling, and session cleanup remain intact
+- [x] Static native-updater regressions and merged-APK verification
+
 ## Candidate next milestones
 
 ### 0.3 — Frontier economy

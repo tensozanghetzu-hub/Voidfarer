@@ -15,7 +15,7 @@
 - Four three-rank upgrade paths and a purchasable destroyer
 - Autopilot routes through the local jump-gate network
 - Local JSON save/continue and insurance recovery
-- Manual in-game GitHub update checks, verified downloads, and Android-confirmed installation
+- Manual GitHub update checks, verified downloads, and Android 12+ no-user-action self-updates when permitted, with confirmation fallback
 - Original procedural visuals and application icon
 - No sound, accounts, advertisements, analytics, in-app purchases, or required network connection
 
@@ -37,7 +37,7 @@ Manual thrust cancels autopilot. The Android back button pauses or closes the cu
 
 ### Updating
 
-From v0.2.0 onward, choose **CHECK FOR UPDATES** on the main menu, download a newer GitHub release, and confirm Android's installation prompt. Only this manual updater uses the network; gameplay remains offline. See [`docs/UPDATES.md`](docs/UPDATES.md) for details and release requirements.
+From v0.2.0 onward, choose **CHECK FOR UPDATES** on the main menu and download a newer GitHub release. From v0.2.3 onward, Android 12+ can install later self-updates without confirmation when the operating system permits it; otherwise the normal confirmation opens automatically. Only this manual updater uses the network; gameplay remains offline. See [`docs/UPDATES.md`](docs/UPDATES.md) for details and release requirements.
 
 ### Keyboard
 

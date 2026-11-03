@@ -2,7 +2,7 @@
 
 ## Install the current APK
 
-The current build is an **ARM64 Android debug APK**, package `com.tensozanghetzu.voidfarer`, version `0.2.2` (`versionCode=4`).
+The current build is an **ARM64 Android debug APK**, package `com.tensozanghetzu.voidfarer`, version `0.2.3` (`versionCode=5`).
 
 1. Copy `Voidfarer.apk` to an ARM64 Android phone or tablet.
 2. Open it with the device's file manager. If Android asks, allow that file manager to install unknown apps.
@@ -11,10 +11,11 @@ The current build is an **ARM64 Android debug APK**, package `com.tensozanghetzu
 
 This is a personally sideloaded debug build, not a Play Store release. Android or Play Protect may show an unknown-app warning. Only install builds you trust.
 
-The APK declares exactly two permissions:
+The APK declares exactly three permissions:
 
 - `INTERNET` — used only by the manual update panel
-- `REQUEST_INSTALL_PACKAGES` — used to open Android's user-confirmed update installer
+- `REQUEST_INSTALL_PACKAGES` — used to request APK updates and, when required, open Android's installer
+- `UPDATE_PACKAGES_WITHOUT_USER_ACTION` — allows the Android 12+ updater to request self-updates without confirmation when all platform conditions are met
 
 Gameplay, local saves, and all station/flight systems work offline. See [`UPDATES.md`](UPDATES.md) for the update flow.
 
@@ -36,6 +37,12 @@ godot --headless --path . --script res://tests/test_runner.gd
 ```
 
 The offline suite exercises gameplay plus updater version/metadata and interface behavior. It uses and then removes a local test save.
+
+After rebuilding the native bridge, run its static AAR/bytecode regressions with JDK and Android SDK paths available:
+
+```bash
+python3 tests/test_android_updater.py
+```
 
 An optional live test queries GitHub and downloads the current public APK to verify redirects, size, and SHA-256 handling:
 

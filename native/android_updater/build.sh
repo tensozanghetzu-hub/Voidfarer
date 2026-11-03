@@ -30,7 +30,7 @@ trap 'rm -rf "$WORK"' EXIT
 "$JAVAC" -source 8 -target 8 -Xlint:-options \
     -cp "$ANDROID_JAR:$GODOT_ANDROID_CLASSES" \
     -d "$WORK/classes" \
-    "$SCRIPT_DIR/src/com/voidfarer/updater/VoidfarerUpdaterPlugin.java"
+    "$SCRIPT_DIR"/src/com/voidfarer/updater/*.java
 
 "$JAR" cf "$WORK/aar/classes.jar" -C "$WORK/classes" .
 cp "$SCRIPT_DIR/AndroidManifest.xml" "$WORK/aar/AndroidManifest.xml"

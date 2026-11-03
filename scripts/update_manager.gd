@@ -122,7 +122,7 @@ func install_downloaded() -> String:
 	var result: String = str(bridge.installApk(ProjectSettings.globalize_path(downloaded_path)))
 	match result:
 		"started":
-			status = "Android's installer is open. Confirm the update; your save is retained."
+			status = "Android is installing the update. Confirm if prompted; your save is retained."
 		"permission_required":
 			status = "Enable ‘Allow from this source’ for Voidfarer, return here, then tap INSTALL again."
 		_:

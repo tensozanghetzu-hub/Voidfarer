@@ -4,9 +4,13 @@
     <uses-sdk
         android:minSdkVersion="21"
         android:targetSdkVersion="34" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
     <application>
         <meta-data
             android:name="org.godotengine.plugin.v2.VoidfarerUpdater"
             android:value="com.voidfarer.updater.VoidfarerUpdaterPlugin" />
+        <receiver
+            android:name=".VoidfarerUpdateReceiver"
+            android:exported="false" />
     </application>
 </manifest>
