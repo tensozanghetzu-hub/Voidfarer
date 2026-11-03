@@ -27,12 +27,16 @@ func _run() -> void:
 	check(world.asteroids.size() > 0, "system generates asteroids")
 	check(world.enemies.size() > 0, "system generates pirates")
 	check(world.cargo_free() == 60, "new Wisp has expected cargo capacity")
+	game._update_hud()
+	check(not game.target_panel.visible, "empty target panel is hidden")
 
 	# Mining simulation.
 	var asteroid: Dictionary = world.asteroids[0]
 	world.player["pos"] = asteroid["pos"] + Vector2(100, 0)
 	world.target_kind = "asteroid"
 	world.target_id = asteroid["id"]
+	game._update_hud()
+	check(game.target_panel.visible and game.target_panel.size.y <= 140, "selected target panel remains compact")
 	world.mining = true
 	world.auto_orbit = false
 	for i in range(240):

@@ -13,6 +13,9 @@ func _run() -> void:
 	root.add_child(game)
 	await process_frame
 	game.start_new_game()
+	game._update_hud()
+	await create_timer(0.3).timeout
+	root.get_texture().get_image().save_png("res://test-results/flight-empty.png")
 	var world = game.world
 	var asteroid: Dictionary = world.asteroids[0]
 	world.player["pos"] = asteroid["pos"] + Vector2(170, -60)

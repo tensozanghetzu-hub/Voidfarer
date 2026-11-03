@@ -17,6 +17,12 @@
 - [x] Android user-confirmed installation and saved-download retention
 - [x] Compatible package/version/signing workflow
 
+## 0.2.1 — HUD refinement
+
+- [x] Hide the target panel completely when no target is selected
+- [x] Keep selected-target information in a bounded compact card
+- [x] Prevent target-label wrapping from expanding the flight HUD
+
 ## Candidate next milestones
 
 ### 0.3 — Frontier economy

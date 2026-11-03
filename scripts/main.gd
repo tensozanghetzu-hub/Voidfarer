@@ -30,6 +30,7 @@ var system_label: Label
 var security_label: Label
 var credits_label: Label
 var cargo_label: Label
+var target_panel: PanelContainer
 var target_title: Label
 var target_detail: Label
 var target_bar: ProgressBar
@@ -300,7 +301,7 @@ func _build_hud() -> void:
 	_button(row, "MAP", open_map, Vector2(82, 40))
 	_button(row, "II", open_pause, Vector2(58, 40))
 
-	var target_panel := PanelContainer.new()
+	target_panel = PanelContainer.new()
 	hud.add_child(target_panel)
 	target_panel.theme = theme
 	target_panel.anchor_left = 0.5
@@ -312,10 +313,18 @@ func _build_hud() -> void:
 	var target_box := _vbox(_margin(target_panel, 8), 4)
 	target_title = _label(target_box, "NO TARGET", 15, CYAN)
 	target_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	target_title.autowrap_mode = TextServer.AUTOWRAP_OFF
+	target_title.clip_text = true
 	target_detail = _label(target_box, "Tap a ship or asteroid", 12, MUTED)
 	target_detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	target_detail.autowrap_mode = TextServer.AUTOWRAP_OFF
+	target_detail.clip_text = true
 	target_bar = _bar(target_box, Color("ff9c75"))
 	target_bar.custom_minimum_size.y = 7
+	# Container layout can otherwise expand this informational card behind the
+	# status panel. Keep it compact and hide it whenever there is no target.
+	target_panel.size = Vector2(420, 96)
+	target_panel.visible = false
 
 	var status := PanelContainer.new()
 	hud.add_child(status)
@@ -929,6 +938,7 @@ func _update_hud() -> void:
 	energy_bar.value = player["energy"]
 	condition_label.text = "SHD %d  ·  ARM %d  ·  HUL %d  ·  CAP %d" % [player["shield"], player["armor"], player["hull"], player["energy"]]
 	var target: Dictionary = world.get_target()
+	target_panel.visible = not target.is_empty()
 	if target.is_empty():
 		target_title.text = "NO TARGET"
 		target_detail.text = "Tap a ship or asteroid · TAB to cycle"
