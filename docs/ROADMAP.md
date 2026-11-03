@@ -1,6 +1,6 @@
 # Voidfarer roadmap
 
-## First Light — current vertical slice
+## First Light — playable foundation
 
 - [x] Offline project foundation and local save
 - [x] Holographic procedural space presentation
@@ -9,23 +9,31 @@
 - [x] Stations, markets, contracts, and fitting
 - [x] ARM64 Android export
 
+## 0.2 — Direct updates
+
+- [x] Manual GitHub release checks
+- [x] Release notes, progress, cancellation, and retry
+- [x] Trusted APK selection plus size/digest verification
+- [x] Android user-confirmed installation and saved-download retention
+- [x] Compatible package/version/signing workflow
+
 ## Candidate next milestones
 
-### 0.2 — Frontier economy
+### 0.3 — Frontier economy
 
 - Station stock and price response to player/NPC trade
 - Additional trade goods and cargo routes
 - Repeatable and procedurally generated contracts
 - Manufacturing and module research
 
-### 0.3 — Living systems
+### 0.4 — Living systems
 
 - NPC miners, traders, and patrols
 - Faction reputation and local security response
 - Persistent asteroid depletion and market inventories
 - Simulated faction control changes
 
-### 0.4 — Greater void
+### 0.5 — Greater void
 
 - Seeded expansion to 20+ systems
 - Exploration and signal scanning
@@ -34,7 +42,7 @@
 
 ## Design constraints
 
-- Fully offline and single-player
+- Offline single-player gameplay; networking only in the manual updater
 - No audio unless explicitly requested later
 - Original setting, names, ships, and artwork
 - Compact source tree and one current APK

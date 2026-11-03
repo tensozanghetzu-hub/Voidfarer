@@ -15,6 +15,7 @@
 - Four three-rank upgrade paths and a purchasable destroyer
 - Autopilot routes through the local jump-gate network
 - Local JSON save/continue and insurance recovery
+- Manual in-game GitHub update checks, verified downloads, and Android-confirmed installation
 - Original procedural visuals and application icon
 - No sound, accounts, advertisements, analytics, in-app purchases, or required network connection
 
@@ -32,6 +33,10 @@
 - **MAP:** select a connected system and plot a gate route
 
 Manual thrust cancels autopilot. The Android back button pauses or closes the current panel.
+
+### Updating
+
+From v0.2.0 onward, choose **CHECK FOR UPDATES** on the main menu, download a newer GitHub release, and confirm Android's installation prompt. Only this manual updater uses the network; gameplay remains offline. See [`docs/UPDATES.md`](docs/UPDATES.md) for details and release requirements.
 
 ### Keyboard
 
@@ -58,7 +63,7 @@ Manual thrust cancels autopilot. The Android back button pauses or closes the cu
 ## Technology
 
 - Godot 4.3
-- GDScript
+- GDScript plus an original Java Android updater bridge
 - OpenGL compatibility renderer
 - ARM64 Android APK
 - No external art or audio dependencies
@@ -68,9 +73,12 @@ Manual thrust cancels autopilot. The Android back button pauses or closes the cu
 ```text
 assets/             Original application icon
 scenes/             Main scene
-scripts/            Simulation, interface, data, controls, and saving
-tests/              Headless gameplay integration checks
-docs/               Design and build notes
+scripts/            Simulation, interface, updater, data, controls, and saving
+addons/             Godot Android updater export plug-in
+native/             Editable Java updater bridge and build script
+tools/              Reproducible Android template setup
+tests/              Headless gameplay and updater integration checks
+docs/               Design, build, and update notes
 export_presets.cfg Android export configuration
 project.godot       Godot project settings
 ```

@@ -17,5 +17,8 @@ Thumbs.db
 *.tmp
 *.bak
 
+# Generated Android Gradle template (reinstall from Godot)
+android/
+
 # Local environment
 .env

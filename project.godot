@@ -5,9 +5,15 @@ config_version=5
 [application]
 config/name="Voidfarer"
 config/description="An original offline tactical space sandbox."
+config/version="0.2.0"
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.3", "GL Compatibility")
 config/icon="res://assets/icon.png"
+
+[editor_plugins]
+; Enabled by tools/prepare_android_build.py after the first project import.
+; This avoids a Godot 4.3 clean headless-import crash with auto-loaded add-ons.
+enabled=PackedStringArray()
 
 [display]
 window/size/viewport_width=1280

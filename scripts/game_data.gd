@@ -1,6 +1,6 @@
 extends RefCounted
 
-const GAME_VERSION := "0.1.0"
+const GAME_VERSION := "0.2.0"
 const SAVE_NAME := "Voidfarer"
 
 const RESOURCES := {

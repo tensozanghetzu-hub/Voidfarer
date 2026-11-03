@@ -4,6 +4,7 @@ const Data = preload("res://scripts/game_data.gd")
 const SaveManager = preload("res://scripts/save_manager.gd")
 const WorldScript = preload("res://scripts/space_world.gd")
 const JoystickScript = preload("res://scripts/touch_joystick.gd")
+const UpdateManagerScript = preload("res://scripts/update_manager.gd")
 
 const CYAN := Color("69e8f2")
 const TEXT := Color("d7edf2")
@@ -51,6 +52,19 @@ var station_page := "overview"
 var map_list: VBoxContainer
 var map_subtitle: Label
 var death_detail: Label
+
+var updater: Node
+var update_screen: Control
+var update_version_label: Label
+var update_status_label: Label
+var update_notes_label: Label
+var update_progress_bar: ProgressBar
+var update_progress_label: Label
+var update_check_button: Button
+var update_download_button: Button
+var update_install_button: Button
+var update_cancel_button: Button
+
 var notice_timer := 0.0
 var hud_timer := 0.0
 
@@ -70,12 +84,18 @@ func _ready() -> void:
 	ui_layer = CanvasLayer.new()
 	ui_layer.name = "Interface"
 	add_child(ui_layer)
+	updater = UpdateManagerScript.new()
+	updater.name = "UpdateManager"
+	add_child(updater)
+	updater.changed.connect(_refresh_update_panel)
+	updater.progress_changed.connect(_on_update_progress)
 	_build_menu()
 	_build_hud()
 	_build_station()
 	_build_map()
 	_build_pause()
 	_build_death()
+	_build_updater()
 	show_menu()
 
 func _register_inputs() -> void:
@@ -232,7 +252,7 @@ func _build_menu() -> void:
 	menu_screen.add_child(shade)
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shade.color = Color(0.005, 0.015, 0.027, 0.44)
-	var panel := _center_panel(menu_screen, 570, 530)
+	var panel := _center_panel(menu_screen, 570, 600)
 	var box := _vbox(_margin(panel, 28), 13)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	var eyebrow := _label(box, "O F F L I N E   S P A C E   S A N D B O X", 14, CYAN)
@@ -245,6 +265,7 @@ func _build_menu() -> void:
 	_button(box, "NEW FLIGHT", start_new_game, Vector2(0, 54))
 	continue_button = _button(box, "CONTINUE", continue_game, Vector2(0, 50))
 	_button(box, "FLIGHT MANUAL", show_flight_manual, Vector2(0, 46))
+	_button(box, "CHECK FOR UPDATES", open_updater, Vector2(0, 44))
 	_button(box, "QUIT", func(): get_tree().quit(), Vector2(0, 42))
 	_spacer(box, 6)
 	var footer := _label(box, "FIRST LIGHT  ·  v%s  ·  NO AUDIO  ·  LOCAL SAVE" % Data.GAME_VERSION, 12, MUTED)
@@ -438,6 +459,90 @@ func _build_death() -> void:
 	_button(box, "RECOVER AT STATION", recover_ship, Vector2(0, 54))
 	_button(box, "RETURN TO MAIN MENU", show_menu, Vector2(0, 46))
 
+func _build_updater() -> void:
+	update_screen = _overlay("FlightUpdates")
+	var panel := _center_panel(update_screen, 800, 620)
+	var outer := _vbox(_margin(panel, 22), 10)
+	var title_row := _hbox(outer, 10)
+	var titles := _vbox(title_row, 3)
+	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_label(titles, "FLIGHT UPDATES", 28, CYAN)
+	update_version_label = _label(titles, "", 13, MUTED)
+	update_cancel_button = _button(title_row, "CANCEL", func(): updater.cancel(), Vector2(105, 42))
+	_button(title_row, "CLOSE", close_updater, Vector2(105, 42))
+	_label(outer, "Manual GitHub updates · no automatic checks · Android confirms every installation.", 14, MUTED)
+	update_status_label = _label(outer, "", 16, Color("ffd28a"))
+	update_status_label.custom_minimum_size.y = 48
+	update_progress_bar = _bar(outer, CYAN)
+	update_progress_bar.custom_minimum_size.y = 14
+	update_progress_label = _label(outer, "", 12, MUTED)
+	update_progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var notes_scroll := ScrollContainer.new()
+	outer.add_child(notes_scroll)
+	notes_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	notes_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	update_notes_label = _label(notes_scroll, "", 14, MUTED)
+	update_notes_label.custom_minimum_size.x = 710
+	update_notes_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var actions := _hbox(outer, 10)
+	update_check_button = _button(actions, "CHECK AGAIN", func(): updater.check_for_updates(), Vector2(150, 46))
+	update_download_button = _button(actions, "DOWNLOAD UPDATE", func(): updater.download_update(), Vector2(180, 46))
+	update_install_button = _button(actions, "INSTALL UPDATE", func(): updater.install_downloaded(), Vector2(170, 46))
+	_button(actions, "RELEASES", func(): updater.open_releases(), Vector2(150, 46))
+	_label(outer, "Keep the same signing key for future builds. Updating preserves app data; uninstalling can erase the local save.", 12, MUTED)
+	_refresh_update_panel()
+
+func open_updater() -> void:
+	if state != "menu":
+		return
+	state = "updater"
+	_hide_all_screens()
+	update_screen.visible = true
+	_refresh_update_panel()
+	if not updater.is_busy() and not updater.has_update() and not updater.has_download():
+		updater.check_for_updates()
+
+func close_updater() -> void:
+	if updater.is_busy():
+		updater.cancel()
+	show_menu()
+
+func _refresh_update_panel() -> void:
+	if update_status_label == null:
+		return
+	update_version_label.text = "INSTALLED v%s  ·  GITHUB RELEASES" % str(updater.current_version)
+	update_status_label.text = str(updater.status)
+	var available: bool = updater.has_update()
+	var ready: bool = updater.has_download()
+	var busy: bool = updater.is_busy()
+	if available:
+		var notes := str(updater.latest_release["notes"]).strip_edges()
+		update_notes_label.text = "%s\n\n%s" % [str(updater.latest_release["title"]), notes if not notes.is_empty() else "No release notes were provided."]
+	else:
+		update_notes_label.text = "Check manually for a newer release. Gameplay never requires a connection, and no update is downloaded or installed without your action."
+	update_check_button.disabled = busy
+	update_download_button.disabled = busy or not available or ready
+	update_download_button.text = "DOWNLOADED" if ready else "DOWNLOAD UPDATE"
+	update_install_button.disabled = busy or not ready
+	update_cancel_button.visible = busy
+	if updater.operation == "check":
+		update_progress_bar.max_value = 1.0
+		update_progress_bar.value = 0.0
+		update_progress_label.text = "Contacting GitHub…"
+
+func _on_update_progress(received: int, total: int) -> void:
+	if update_progress_bar == null:
+		return
+	update_progress_bar.max_value = maxf(float(total), 1.0)
+	update_progress_bar.value = float(received)
+	if total > 0:
+		var percent := int(round(100.0 * float(received) / float(total)))
+		update_progress_label.text = "%.1f / %.1f MB  ·  %d%%" % [float(received) / 1048576.0, float(total) / 1048576.0, percent]
+	elif received > 0:
+		update_progress_label.text = "%.1f MB downloaded" % (float(received) / 1048576.0)
+	else:
+		update_progress_label.text = ""
+
 func show_menu() -> void:
 	state = "menu"
 	world.set_active(false)
@@ -446,7 +551,7 @@ func show_menu() -> void:
 	continue_button.disabled = not SaveManager.has_save()
 
 func _hide_all_screens() -> void:
-	for screen in [menu_screen, hud, station_screen, map_screen, pause_screen, death_screen]:
+	for screen in [menu_screen, hud, station_screen, map_screen, pause_screen, death_screen, update_screen]:
 		screen.visible = false
 
 func start_new_game() -> void:
@@ -877,6 +982,8 @@ func _handle_back() -> void:
 			undock()
 		"death":
 			show_menu()
+		"updater":
+			close_updater()
 		"menu":
 			get_tree().quit()
 

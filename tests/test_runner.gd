@@ -2,6 +2,7 @@ extends SceneTree
 
 const Data = preload("res://scripts/game_data.gd")
 const SaveManager = preload("res://scripts/save_manager.gd")
+const UpdateManager = preload("res://scripts/update_manager.gd")
 
 var game: Node
 var failures: Array[String] = []
@@ -104,6 +105,39 @@ func _run() -> void:
 	game.recover_ship()
 	check(Data.cargo_used(game.profile) == 0, "insurance recovery clears lost cargo")
 	check(float(world.player["hull"]) > 0.0, "insurance recovery restores ship hull")
+
+	# Update metadata, version ordering, and panel behavior (no network required).
+	check(UpdateManager.is_newer_version("0.3.0", "0.2.0"), "updater detects a newer release")
+	check(not UpdateManager.is_newer_version("0.2.0", "0.2.0"), "updater rejects the installed version")
+	check(UpdateManager.is_newer_version("0.10.0", "0.9.9"), "updater compares numeric version segments")
+	check(not UpdateManager.is_newer_version("0.1.9", "0.2.0"), "updater rejects older releases")
+	var release_payload := {
+		"tag_name": "v0.3.0",
+		"name": "Voidfarer test update",
+		"body": "Updater test notes",
+		"draft": false,
+		"prerelease": false,
+		"html_url": "https://github.com/tensozanghetzu-hub/Voidfarer/releases/tag/v0.3.0",
+		"assets": [{
+			"name": "Voidfarer.apk",
+			"browser_download_url": "https://github.com/tensozanghetzu-hub/Voidfarer/releases/download/v0.3.0/Voidfarer.apk",
+			"size": 24371660,
+			"digest": "sha256:abc123"
+		}]
+	}
+	var parsed_release := UpdateManager.parse_release(release_payload)
+	check(str(parsed_release.get("version", "")) == "0.3.0" and str(parsed_release.get("digest", "")) == "abc123", "updater parses release asset and digest")
+	release_payload["assets"][0]["browser_download_url"] = "https://example.com/Voidfarer.apk"
+	check(UpdateManager.parse_release(release_payload).is_empty(), "updater rejects an untrusted APK URL")
+	game.show_menu()
+	check(game.update_download_button.disabled, "updater disables download before a release is selected")
+	game.updater.latest_release = parsed_release
+	game.updater.status = "Update available · Voidfarer v0.3.0"
+	game.open_updater()
+	check(game.state == "updater" and game.update_screen.visible, "update panel opens from the main menu")
+	check(not game.update_download_button.disabled, "available release enables the download button")
+	game.close_updater()
+	check(game.state == "menu" and not game.update_screen.visible, "update panel closes safely")
 
 	SaveManager.delete_save()
 	if failures.is_empty():
